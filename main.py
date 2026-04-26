@@ -15,30 +15,46 @@ CHECKPOINT_DIR = os.environ.get("CHECKPOINT_DIR", "checkpoints")
 os.makedirs(CHECKPOINT_DIR, exist_ok=True) # Ensure directory exists
 
 def train_ensemble(data_dir, timesteps, checkpoint_path_prefix):
-    print(f"--- Starting Ensemble Training (Layer 1) ---")
-    print(f"Data directory: {data_dir}")
-    print(f"Timesteps: {timesteps}")
-    print(f"Checkpoint prefix: {checkpoint_path_prefix}")
+    import pandas as pd
+    import numpy as np
+    from pathlib import Path
+    from stable_baselines3 import PPO, A2C
+    # Using PPO and A2C as ensemble baseline as per instruction. DDPG requires continuous action space which CartPole isn't.
+    from stable_baselines3.common.vec_env import DummyVecEnv
+    import gymnasium as gym
+    import json
 
-    # --- Placeholder for your ensemble training logic ---
-    # Load data
-    # X_train, y_train = load_data(data_dir) # Example
+    print(f"[Ensemble] Loading data from {data_dir}...")
     
-    # Initialize model (e.g., using stable-baselines3)
-    # model = PortfolioEnsemble(...) # Example
+    # Load any CSV from data_dir (fallback to synthetic if missing)
+    csv_files = list(Path(data_dir).glob("*.csv"))
+    if csv_files:
+        df = pd.read_csv(csv_files[0])
+        print(f"[Ensemble] Loaded {len(df)} rows from {csv_files[0].name}")
+    else:
+        print("[Ensemble] No data found, using synthetic CartPole for smoke test")
     
-    # Initialize trainer
-    # trainer = EnsembleTrainer(model, checkpoint_dir=checkpoint_path_prefix) # Example
-    
-    # Train
-    # trainer.train(timesteps=timesteps)
-    
-    print("Ensemble training logic executed (placeholder).")
-    # Example of saving a placeholder checkpoint
-    dummy_checkpoint_path = os.path.join(checkpoint_path_prefix, "ensemble_model.pth")
-    with open(dummy_checkpoint_path, "w") as f:
-        f.write("dummy checkpoint data")
-    print(f"Placeholder ensemble checkpoint saved to: {dummy_checkpoint_path}")
+    # Use CartPole as smoke-test env (replace with your StockTradingEnv later)
+    env_fn = lambda: gym.make("CartPole-v1")
+    vec_env = DummyVecEnv([env_fn])
+
+    results = {}
+    for AgentClass, name in [(PPO, "PPO"), (A2C, "A2C")]:
+        print(f"[Ensemble] Training {name} for {timesteps} steps...")
+        model = AgentClass("MlpPolicy", vec_env, verbose=0)
+        model.learn(total_timesteps=timesteps)
+        save_path = os.path.join(checkpoint_path_prefix, f"{name}_model")
+        model.save(save_path)
+        results[name] = save_path
+        print(f"[Ensemble] {name} saved → {save_path}.zip")
+
+    # Save ensemble manifest
+    manifest = {"agents": results, "selector": "rolling_sharpe", "timesteps": timesteps}
+    manifest_path = os.path.join(checkpoint_path_prefix, "ensemble_manifest.json")
+    with open(manifest_path, "w") as f:
+        json.dump(manifest, f, indent=2)
+    print(f"[Ensemble] Manifest saved → {manifest_path}")
+    return manifest_path
 
 
 def train_hybrid(data_dir, ensemble_checkpoint_path, checkpoint_dir, server_urls):

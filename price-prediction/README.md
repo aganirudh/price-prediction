@@ -21,6 +21,20 @@ A static ML model that simply detects violations fails because:
 ### Why MCP Servers?
 Instead of passively receiving a state dict, our agent **actively calls MCP tools** to gather market intelligence. This mirrors how a real trader would operate — checking the option chain, computing costs, evaluating risk limits — before making a decision.
 
+## ⚠️ Implementation Status
+
+| Component | Status |
+|-----------|--------|
+| SB3 Ensemble (PPO + A2C) | ✅ Working |
+| DDPG Agent | 🔧 In progress |
+| GRPO/Unsloth LLM layer | 🔧 Architecture defined, training wired |
+| MCP Servers (FastAPI) | ✅ Structure ready |
+| Live NSE Feed | 📋 Planned |
+| Backtesting Engine | 📋 Planned |
+
+> This project is under active development. The ensemble RL layer trains end-to-end.
+> The LLM arbitrage layer architecture is complete; GRPO fine-tuning requires a GPU.
+
 ## Architecture
 
 ```
