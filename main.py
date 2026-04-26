@@ -34,8 +34,14 @@ def train_ensemble(data_dir, timesteps, checkpoint_path_prefix):
     else:
         print("[Ensemble] No data found, using synthetic CartPole for smoke test")
     
-    # Use CartPole as smoke-test env (replace with your StockTradingEnv later)
-    env_fn = lambda: gym.make("CartPole-v1")
+    from stock_rl_env import StockTradingEnv
+
+    # Use StockTradingEnv with the loaded data
+    if 'df' in locals():
+        env_fn = lambda: StockTradingEnv(df=df)
+    else:
+        env_fn = lambda: StockTradingEnv() # Will use synthetic data if no CSV found
+    
     vec_env = DummyVecEnv([env_fn])
 
     results = {}
