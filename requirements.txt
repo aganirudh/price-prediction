@@ -1,0 +1,19 @@
+# Core ML / RL Libraries
+stable-baselines3
+unsloth
+trl
+torch
+# If you use FinRL directly in your setup:
+# finrl
+
+# Web Frameworks for Servers
+fastapi
+uvicorn
+requests
+
+# Utilities
+wandb
+kaggle
+
+# Add any other dependencies your project needs
+# Example: numpy, pandas, scikit-learn, etc.
