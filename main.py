@@ -125,16 +125,43 @@ def run_train_ensemble(args):
     # ── Load or synthesize price data ──────────────────────────────────────────
     csv_files = list(Path(args.data_dir).glob("**/*.csv")) if Path(args.data_dir).exists() else []
     if csv_files:
-        print(f"[Data] Loading from {csv_files[0].name}...")
-        df = pd.read_csv(csv_files[0])
-        # Try common column names
-        for col in ["Close", "close", "CLOSE", "Adj Close", "adj_close"]:
-            if col in df.columns:
-                prices = df[col].dropna().values.astype(np.float64)
-                break
-        else:
-            prices = df.iloc[:, -1].dropna().values.astype(np.float64)
-        print(f"[Data] Loaded {len(prices)} price points from {csv_files[0].name}")
+        all_prices = []
+        for csv_file in csv_files[:3]:
+            try:
+                raw = pd.read_csv(csv_file)
+                # yfinance new format: first row is ticker name, not a date
+                # Detect by checking if first value in first col is a date
+                try:
+                    pd.to_datetime(raw.iloc[0, 0])
+                    df = raw  # first row IS a date — normal format
+                except Exception:
+                    df = pd.read_csv(csv_file, skiprows=1)  # skip ticker-name row
+
+                df.columns = [str(c).strip() for c in df.columns]
+                price_col = None
+                for col in ["Close", "close", "CLOSE", "Adj Close", "adj_close", "Price"]:
+                    if col in df.columns:
+                        price_col = col
+                        break
+                if price_col is None:
+                    for col in reversed(df.columns):
+                        vals = pd.to_numeric(df[col], errors="coerce").dropna()
+                        if len(vals) > 100:
+                            price_col = col
+                            break
+                if price_col:
+                    p = pd.to_numeric(df[price_col], errors="coerce").dropna().values.astype(np.float64)
+                    if len(p) > 100:
+                        all_prices.append(p)
+                        print(f"[Data] Loaded {len(p)} rows from {csv_file.name} (col={price_col})")
+            except Exception as e:
+                print(f"[Data] Skipping {csv_file.name}: {e}")
+
+        prices = all_prices[0] if all_prices else None
+        if prices is None:
+            print("[Data] Could not parse any CSV — using synthetic data")
+            np.random.seed(42)
+            prices = 17000 * np.exp(np.cumsum(np.random.normal(0.0004, 0.012, 2000)))
     else:
         print("[Data] No CSV found — generating synthetic GBM prices (NIFTY-like)")
         np.random.seed(42)
