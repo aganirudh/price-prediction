@@ -526,7 +526,7 @@ def run_backtest(args):
     total_return = (nav_arr[-1] / nav_arr[0] - 1) * 100
     rets = np.diff(nav_arr) / nav_arr[:-1]
     sharpe = (rets.mean() / (rets.std() + 1e-9)) * np.sqrt(252)
-    max_dd = ((nav_arr - nav_arr.cummax()) / nav_arr.cummax()).min() * 100
+    max_dd = ((pd.Series(nav_arr) - pd.Series(nav_arr).cummax()) / pd.Series(nav_arr).cummax()).min() * 100
 
     print(f"\n  ── Backtest Results ──")
     print(f"  Total Return:  {total_return:.2f}%")
